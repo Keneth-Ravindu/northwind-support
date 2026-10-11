@@ -111,4 +111,22 @@ public sealed class Ticket : AggregateRoot
         AssignedAgentId = agentId;
         UpdatedAtUtc = nowUtc;
     }
+
+        
+    /// <summary>
+    /// Sets or updates the ticket's SLA deadline.
+    /// Used during automatic triage and escalation.
+    /// </summary>
+    public void SetDueDate(DateTime dueAtUtc, DateTime nowUtc)
+    {
+        if (dueAtUtc <= nowUtc)
+        {
+            throw new BusinessRuleViolationException(
+                "The SLA deadline must be in the future.");
+        }
+
+        DueAtUtc = dueAtUtc;
+        UpdatedAtUtc = nowUtc;
+    }
+
 }

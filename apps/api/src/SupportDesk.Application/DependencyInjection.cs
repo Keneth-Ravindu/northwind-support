@@ -9,6 +9,8 @@ using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Application.Features.Tickets.Queries.SearchTickets;
+using SupportDesk.Application.Features.Tickets.Triage;
+using Microsoft.Extensions.Configuration;
 
 namespace SupportDesk.Application;
 
@@ -33,6 +35,20 @@ public static class DependencyInjection
         services.AddScoped<GetCategoriesQueryHandler>();
 
         services.AddValidatorsFromAssemblyContaining<RaiseTicketCommandHandler>(ServiceLifetime.Singleton);
+
+        services.AddSingleton(sp =>
+        {
+            var configuration = sp.GetRequiredService<
+                Microsoft.Extensions.Configuration.IConfiguration>();
+
+            return configuration
+                .GetSection(SlaOptions.SectionName)
+                .Get<SlaOptions>()
+                ?? throw new InvalidOperationException(
+                    "SLA configuration is missing.");
+        });
+
+        services.AddScoped<SlaCalculator>();
 
         return services;
     }
