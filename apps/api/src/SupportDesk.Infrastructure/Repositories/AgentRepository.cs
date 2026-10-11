@@ -60,4 +60,38 @@ public sealed class AgentRepository(SupportDbContext db)
             .Select(x => x.Agent)
             .FirstOrDefaultAsync(ct);
     }
+
+
+    public async Task<bool> IsEligibleForEscalationAsync(
+        int agentId,
+        int categoryId,
+        bool requiresSpecialist,
+        CancellationToken ct)
+    {
+        var agent = await db.Set<Agent>()
+            .AsNoTracking()
+            .Where(a => a.Id == agentId && a.IsActive)
+            .Select(a => new
+            {
+                a.MaxOpenTickets,
+                HasSpecialization = a.Specializations.Any(
+                    s => s.CategoryId == categoryId),
+                OpenTicketCount = db.Set<Ticket>().Count(
+                    t => t.AssignedAgentId == a.Id &&
+                        t.Status != TicketStatus.Resolved &&
+                        t.Status != TicketStatus.Closed)
+            })
+            .FirstOrDefaultAsync(ct);
+
+        if (agent is null)
+            return false;
+
+        if (requiresSpecialist && !agent.HasSpecialization)
+            return false;
+
+        // The existing ticket already occupies one capacity slot.
+        // Retaining its current owner does not add another ticket.
+        return agent.OpenTicketCount <= agent.MaxOpenTickets;
+    }
+
 }

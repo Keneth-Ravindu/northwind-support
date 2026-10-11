@@ -11,6 +11,8 @@ using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Application.Features.Tickets.Queries.SearchTickets;
 using SupportDesk.Application.Features.Tickets.Triage;
 using Microsoft.Extensions.Configuration;
+using SupportDesk.Application.Features.Tickets.Commands.EscalateTicket;
+
 
 namespace SupportDesk.Application;
 
@@ -49,6 +51,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<SlaCalculator>();
+        services.AddScoped<EscalateTicketCommandHandler>();
 
         return services;
     }

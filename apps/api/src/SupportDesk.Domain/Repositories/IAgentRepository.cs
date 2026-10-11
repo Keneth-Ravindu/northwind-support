@@ -10,4 +10,10 @@ public interface IAgentRepository
         int categoryId,
         bool requiresSpecialist,
         CancellationToken ct);
+
+    Task<bool> IsEligibleForEscalationAsync(
+        int agentId,
+        int categoryId,
+        bool requiresSpecialist,
+        CancellationToken ct);
 }

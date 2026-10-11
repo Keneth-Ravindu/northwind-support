@@ -6,6 +6,8 @@ using SupportDesk.Application.Features.Tickets.Commands.ChangeTicketStatus;
 using SupportDesk.Application.Features.Tickets.Commands.RaiseTicket;
 using SupportDesk.Application.Features.Tickets.Queries.GetTicket;
 using SupportDesk.Application.Features.Tickets.Queries.SearchTickets;
+using SupportDesk.Application.Features.Tickets.Commands.EscalateTicket;
+using SupportDesk.Domain.Repositories;
 
 namespace SupportDesk.Presentation.Controllers;
 
@@ -56,4 +58,71 @@ public sealed class TicketsController : ControllerBase
         [FromServices] AssignTicketCommandHandler handler,
         CancellationToken ct) =>
         handler.HandleAsync(id, request, ct);
+
+
+    /// <summary>
+    /// Escalates a ticket by one priority level,
+    /// recalculates the SLA, and reassesses its assignment.
+    /// </summary>
+    [HttpPost("{id:int}/escalate")]
+    public async Task<ActionResult<TicketDetailDto>> Escalate(
+        int id,
+        [FromBody] EscalateTicketRequest request,
+        [FromServices] EscalateTicketCommandHandler handler,
+        CancellationToken ct)
+    {
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.EscalatedBy) ||
+            request.EscalatedBy.Trim().Length > 200 ||
+            string.IsNullOrWhiteSpace(request.Reason) ||
+            request.Reason.Trim().Length is < 5 or > 500)
+        {
+            return BadRequest(new
+            {
+                message = "EscalatedBy must be 1–200 characters and Reason must be 5–500 characters."
+            });
+        }
+
+        var updated = await handler.HandleAsync(id, request, ct);
+
+        return Ok(updated);
+    }
+
+    /// <summary>
+    /// Returns a ticket's escalation history, newest first.
+    /// </summary>
+    [HttpGet("{id:int}/escalations")]
+    public async Task<ActionResult<IReadOnlyList<TicketEscalationDto>>> GetEscalations(
+        int id,
+        [FromServices] ITicketRepository tickets,
+        [FromServices] ITicketEscalationRepository escalations,
+        CancellationToken ct)
+    {
+        var ticket = await tickets.GetByIdAsync(id, ct);
+
+        if (ticket is null)
+        {
+            return NotFound(new { message = $"Ticket {id} was not found." });
+        }
+
+        var history = await escalations.GetByTicketIdAsync(id, ct);
+
+        var result = history
+            .Select(e => new TicketEscalationDto(
+                e.Id,
+                e.TicketId,
+                e.PreviousPriority,
+                e.NewPriority,
+                e.PreviousDueAtUtc,
+                e.NewDueAtUtc,
+                e.PreviousAgentId,
+                e.NewAgentId,
+                e.EscalatedBy,
+                e.Reason,
+                e.EscalatedAtUtc))
+            .ToList();
+
+        return Ok(result);
+    }
+
 }
