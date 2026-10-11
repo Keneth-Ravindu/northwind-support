@@ -51,4 +51,34 @@ describe('useTicketList', () => {
     expect(result.current.isLoading).toBe(false);
     expect(result.current.data?.items).toHaveLength(1);
   });
+
+
+
+  it('fetches immediately when the status filter changes', async () => {
+    const { result } = renderHook(() => useTicketList());
+
+    // Allow the initial API request and React updates to finish.
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(getTickets).toHaveBeenCalledTimes(1);
+
+    // Simulate selecting "In progress".
+    await act(async () => {
+      result.current.updateFilters({ status: 'InProgress' });
+      await Promise.resolve();
+    });
+
+    // Status changes must trigger a request without advancing timers.
+    expect(getTickets).toHaveBeenCalledTimes(2);
+
+    expect(getTickets).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        status: 'InProgress',
+        page: 1,
+      }),
+    );
+  });
+
 });
