@@ -1,15 +1,18 @@
+
 using SupportDesk.Domain.Aggregates.Tickets;
 
 namespace SupportDesk.UnitTests.TestDoubles;
 
 /// <summary>
-/// Builds tickets for tests, so each test only has to say what actually matters to it. The
-/// ticket is driven into the requested state through its own behaviour, so a test can never
-/// start from a state the domain would not allow.
+/// Builds valid tickets using the domain's own behaviour.
+/// Tests can customize only the properties relevant to them.
 /// </summary>
 public sealed class TicketBuilder
 {
     private string _reference = "TCK-0001";
+    private string _title = "Something is not working";
+    private int _customerId = 1;
+    private int _categoryId = 1;
     private TicketPriority _priority = TicketPriority.Medium;
     private TicketStatus _status = TicketStatus.New;
     private int? _assignedAgentId;
@@ -18,6 +21,24 @@ public sealed class TicketBuilder
     public TicketBuilder WithReference(string reference)
     {
         _reference = reference;
+        return this;
+    }
+
+    public TicketBuilder WithTitle(string title)
+    {
+        _title = title;
+        return this;
+    }
+
+    public TicketBuilder WithCustomerId(int customerId)
+    {
+        _customerId = customerId;
+        return this;
+    }
+
+    public TicketBuilder WithCategoryId(int categoryId)
+    {
+        _categoryId = categoryId;
         return this;
     }
 
@@ -39,7 +60,6 @@ public sealed class TicketBuilder
         return this;
     }
 
-    /// <summary>When the ticket reached its status; for Resolved and Closed, the resolution time.</summary>
     public TicketBuilder ResolvedAt(DateTime? resolvedAtUtc)
     {
         _resolvedAtUtc = resolvedAtUtc;
@@ -50,10 +70,10 @@ public sealed class TicketBuilder
     {
         var ticket = Ticket.Raise(
             _reference,
-            "Something is not working",
+            _title,
             "A description long enough to be realistic.",
-            customerId: 1,
-            categoryId: 1,
+            _customerId,
+            _categoryId,
             _priority,
             FixedClock.DefaultNow);
 
@@ -64,7 +84,9 @@ public sealed class TicketBuilder
 
         if (_status != TicketStatus.New)
         {
-            ticket.ChangeStatus(_status, _resolvedAtUtc ?? FixedClock.DefaultNow);
+            ticket.ChangeStatus(
+                _status,
+                _resolvedAtUtc ?? FixedClock.DefaultNow);
         }
 
         return ticket;
